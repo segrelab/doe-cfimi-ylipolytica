@@ -34,7 +34,7 @@ media_mM = [media_mM, 5.6]; % [mM]
 
 for numModel = 1:length(model)
     % Find Exchange Reactions
-    exch_rxns = findExchRxns(model{numModel});
+    exch_rxns = identifyExchRxns(model{numModel});
     % Change Bounds
     model{numModel}.lb(exch_rxns) = -100;
     [~,glc_idx] = intersect(model{numModel}.rxns,'EX_glc__D_e');

@@ -36,7 +36,7 @@ end
 clear temp
 
 % Exchange Reactions
-[exch_rxns,~] = findExchRxns(Cfimi);
+[exch_rxns,~] = identifyExchRxns(Cfimi);
 Cfimi.lb(exch_rxns) = 0;
 
 % Find Reactions for Essential Metabolites

@@ -32,7 +32,7 @@ sugar_mM = 5.5; % [mM];
 
 for numModel = 1:length(model)
     % Find Exchange Reactions
-    exch_rxns = findExchRxns(model{numModel});
+    exch_rxns = identifyExchRxns(model{numModel});
     % Change Bounds
     model{numModel}.lb(exch_rxns) = -100;
     [~,o2_idx] = intersect(model{numModel}.rxns,'EX_o2_e');
