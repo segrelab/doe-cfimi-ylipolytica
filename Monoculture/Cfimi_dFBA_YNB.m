@@ -15,6 +15,9 @@ exp = load([saveDataName '_exp.mat']);
 load('..\Models\Cfimi_KBase_gfMPIPES_bigg_trsptrs.mat')
 model{1} = Cfimi;
 
+% Parameters
+load('parameters.mat');
+
 % Medium
 load('..\Media\Media_YNB.mat')
 medium = arrayfun(@(x) ['EX_' YNB(x).id '_e'],1:numel(YNB),'Uni',false);
@@ -28,7 +31,7 @@ media_names = [media_names added_names(idx_add)];
 media_mM = [media_mM, 1E3.*(5E-5.*ones(1,length(added_names(idx_add))))]; % [mM] (1 M * 1E3 mM/1 M)
 % Cellulose
 media_names = [media_names 'cellulose_e'];
-media_mM = [media_mM, 5.6]; % [mM]
+media_mM = [media_mM, params.cellulose_mM]; % [mM]
 
 %% Set Exchange Bounds
 
@@ -41,18 +44,20 @@ for numModel = 1:length(model)
     model{numModel}.lb(glc_idx) = -10;
     [~,o2_idx] = intersect(model{numModel}.rxns,'EX_o2_e');
     model{numModel}.lb(o2_idx) = -20;
+    [~,co2_idx] = intersect(model{numModel}.rxns,'EX_co2_e');
+    model{numModel}.lb(co2_idx) = 0;
 end
 
 %% Define Parameter Values
 
-biomass_0 = 1E-5.*ones(size(model)); % gCDW
-dt = 0.1; % hr
-Tend = 48; % hrs
+biomass_0 = params.biomass_0.*ones(size(model)); % gCDW
+dt = params.dt; % hr
+Tend = params.Tend; % hrs
 N = Tend/dt;
-volume = 250E-3; % L
-Km = 0.01.*ones(size(model)); % mM
-Vmax = 10.*ones(size(model)); % mmol/gCDW/hr
-max_biomass = 2.2; % gCDW
+volume = params.volume; % L
+Km = params.Km.Cfimi; % mM
+Vmax = params.Vmax.Cfimi; % mmol/gCDW/hr
+max_biomass = params.max_biomass; % gCDW
 enzymeModel = 1;
 
 %% Run dFBA
@@ -85,6 +90,10 @@ exchMets_names(cellulase_idx) = [];
 [~,p_idx,~] = intersect(exchMets_names,'pi');
 [~,s_idx,~] = intersect(exchMets_names,'so4');
 
+Cfimi_color = [84,39,143]./256;
+Ylipolytica_color = [166,54,3]./256;
+enzyme_color = [0,109,44]./256;
+
 microbe = {'C. fimi'};
 medium = 'YNB+cellulose';
 xyLabelSize = 30;
@@ -96,7 +105,7 @@ lineWidth = 3;
 n = 1;
 if ishandle(n); clf(findobj('Type','Figure', 'Number',n)); end
 fig = figure(n); fig.Name = 'BiomassExp'; ax = axes(fig);
-semilogy(ax,exp.time,exp.biomass,'ko-', 'LineWidth',lineWidth, 'MarkerFaceColor','k');
+semilogy(ax,exp.time,exp.biomass,'o-', 'LineWidth',lineWidth, 'Color',Cfimi_color, 'MarkerFaceColor',Cfimi_color, 'MarkerEdgeColor',Cfimi_color);
 xlim(ax,[0, exp.time(end)])
 ylim(ax,[0, ax.YLim(2)])
 ax.YTickLabel = ax.YTick;
@@ -113,7 +122,7 @@ if ishandle(n); clf(findobj('Type','Figure', 'Number',n)); end
 fig = figure(n); fig.Name = 'Biomass_Metabolites_Enzyme';
 % biomass
 ax = subplot(3,1,1);
-semilogy(ax,time,1E3.*biomass{1},'k-', 'LineWidth',lineWidth);
+semilogy(ax,time,1E3.*biomass{1},'-', 'LineWidth',lineWidth, 'Color',Cfimi_color);
 xlim(ax,[0, time(end)])
 ylim(ax,[0, 50])
 ax.XTickLabel = []; ax.YTickLabel = ax.YTick;
@@ -134,42 +143,14 @@ ylabel(ax, {'Metabolite'; 'Concentration'; '[mM]'}, 'FontSize',f*xyLabelSize)
 lh = legend({'Cellulose','Glucose','Nitrate','Phosphate','Sulfate'}, 'Location','Best'); lh.Box = 'Off';
 % enzyme
 ax = subplot(3,1,3);
-plot(ax,time,cellulase_mM,'k-','LineWidth',lineWidth)
+plot(ax,time,cellulase_mM,'-','LineWidth',lineWidth, 'Color',enzyme_color)
 xlim(ax,[0, time(end)])
 grid(ax,'on'); ax.FontSize = f*axesLabelSize;
 xlabel(ax, 'Time [hours]', 'FontSize',f*xyLabelSize)
 ylabel(ax, {'Cellulase'; 'Concentration'; '[mM]'}, 'FontSize',f*xyLabelSize)
 saveas(fig,[pwd '\' saveDataName '\Biomass_Metabolites_Enzyme'],'png')
 
-% Biomass Semilog Plot
-n = 3;
-if ishandle(n); clf(findobj('Type','Figure', 'Number',n)); end
-fig = figure(n); fig.Name = 'Biomass'; ax = axes(fig);
-semilogy(ax,time,1E3.*biomass{1},'k-', 'LineWidth',lineWidth);
-xlim(ax,[0, time(end)])
-ylim(ax,[0, 50])
-ax.YTickLabel = ax.YTick;
-grid(ax,'on'); ax.FontSize = axesLabelSize;
-xlabel(ax, 'Time [hours]', 'FontSize',xyLabelSize)
-ylabel(ax, 'Total Biomass [mg CDW]', 'FontSize',xyLabelSize)
-title(ax, medium, 'FontSize',titleSize)
-saveas(fig,[pwd '\' saveDataName '\Biomass'],'png')
 
-% Metabolites
-[~,col] = find(abs(diff(exchMets_mM)) > 1E-9); col = unique(col);
-c = cbrewer('qual','Set1',numel(col));
-n = 4;
-if ishandle(n); clf(findobj('Type','Figure', 'Number',n)); end
-fig = figure(n); fig.Name = 'Metabolites'; ax = axes(fig);
-set(ax, 'ColorOrder',c, 'NextPlot','replacechildren');
-h = plot(ax,time,exchMets_mM(:,col),'-', 'LineWidth',lineWidth);
-xlim(ax,[0, time(end)])
-grid(ax,'on'); ax.FontSize = axesLabelSize;
-xlabel(ax, 'Time [hours]', 'FontSize',xyLabelSize)
-ylabel(ax, 'Metabolite Concentration [mM]', 'FontSize',xyLabelSize)
-title(ax, medium, 'FontSize',titleSize)
-lh = legend(h,exchMets_names(col), 'Location','Best'); lh.Box = 'Off';
-saveas(fig,[pwd '\' saveDataName '\Metabolites'],'png')
 
 
 

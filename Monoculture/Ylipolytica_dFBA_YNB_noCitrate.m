@@ -5,12 +5,15 @@ clc
 
 %% Load Data
 
-saveDataName = 'Yarrowia_YNB';
+saveDataName = 'Ylipolytica_YNB_noCitrate';
 if isdir([pwd '\' saveDataName])==0; mkdir([pwd '\' saveDataName]); end
 
 % Model
 load('..\Models\Ylipolytica_iMK735_bigg.mat')
 model{1} = Ylipolytica;
+
+% Parameters
+load('parameters.mat');
 
 % Medium
 load('..\Media\Media_YNB.mat')
@@ -23,6 +26,10 @@ added_names = arrayfun(@(x) [Ylipolytica_essentialMets(x).id '_e'], 1:length({Yl
 [~,idx_add] = setdiff(added_names,media_names);
 media_names = [media_names added_names(idx_add)];
 media_mM = [media_mM, 1E3.*(5E-5.*ones(1,length(added_names(idx_add))))]; % [mM] (1 M * 1E3 mM/1 M)
+% Remove Citrate
+[~,cit_idx,~] = intersect(media_names,'cit_e');
+media_names(cit_idx) = [];
+media_mM(cit_idx) = [];
 % Sugars
 % sugar_names = {'glc__D';'cellb';{'arab__L';'arab__D'};'man';'gal';'xyl__D'}; % glucose, cellobiose, arabinose, mannose, galactose, xylose
 sugar_names = {'glc__D';{'arab__L';'arab__D'};'man';'gal';'xyl__D'}; % glucose, arabinose, mannose, galactose, xylose
@@ -37,18 +44,20 @@ for numModel = 1:length(model)
     model{numModel}.lb(exch_rxns) = -100;
     [~,o2_idx] = intersect(model{numModel}.rxns,'EX_o2_e');
     model{numModel}.lb(o2_idx) = -20;
+    [~,co2_idx] = intersect(model{numModel}.rxns,'EX_co2_e');
+    model{numModel}.lb(co2_idx) = 0;
 end
 
 %% Define Parameter Values
 
-biomass_0 = 1E-5.*ones(size(model)); % gCDW
-dt = 0.1; % hr
-Tend = 24; % hrs
+biomass_0 = params.biomass_0.*ones(size(model)); % gCDW
+dt = params.dt; % hr
+Tend = params.Tend; % hrs
 N = Tend/dt;
-volume = 250E-3; % L
-Km = 0.01.*ones(size(model)); % mM
-Vmax = 10.*ones(size(model)); % mmol/gCDW/hr
-max_biomass = 2.2; % gCDW
+volume = params.volume; % L
+Km = params.Km.Ylipolytica; % mM
+Vmax = params.Vmax.Ylipolytica; % mmol/gCDW/hr
+max_biomass = params.max_biomass; % gCDW
 enzymeModel = 0;
 
 %% Run dFBA - Individual Sugars

@@ -31,8 +31,8 @@ lineWidth = 3;
 n = 1;
 if ishandle(n); clf(findobj('Type','Figure', 'Number',n)); end
 fig = figure(n); fig.Name = 'BiomassExp'; ax = axes(fig);
-semilogy(ax,exp_bsm.time,exp_bsm.biomass,'ko-', 'LineWidth',lineWidth, 'MarkerFaceColor','k'); hold(ax,'on')
-semilogy(ax,exp_ynb.time,exp_ynb.biomass,'ks--', 'LineWidth',lineWidth, 'MarkerFaceColor','k'); hold(ax,'off')
+semilogy(ax,exp_ynb.time,exp_ynb.biomass,'ko-', 'LineWidth',lineWidth, 'MarkerFaceColor','k'); hold(ax,'on')
+semilogy(ax,exp_bsm.time,exp_bsm.biomass,'ks--', 'LineWidth',lineWidth, 'MarkerFaceColor','k'); hold(ax,'off')
 xlim(ax,[0, exp_bsm.time(end)])
 ylim(ax,[1, ax.YLim(2)])
 ax.YTickLabel = ax.YTick;
@@ -47,8 +47,8 @@ saveas(fig,[pwd '\' saveDataName '\BiomassExp'],'png')
 n = 2;
 if ishandle(n); clf(findobj('Type','Figure', 'Number',n)); end
 fig = figure(n); fig.Name = 'BiomassSim'; ax = axes(fig);
-semilogy(ax,time,biomass{1},'k-', 'LineWidth',lineWidth, 'MarkerFaceColor','k'); hold(ax,'on')
-semilogy(ax,time,biomass{2},'k--', 'LineWidth',lineWidth, 'MarkerFaceColor','k'); hold(ax,'off')
+semilogy(ax,time,1E3.*biomass{1},'k-', 'LineWidth',lineWidth, 'MarkerFaceColor','k'); hold(ax,'on')
+semilogy(ax,time,1E3.*biomass{2},'k--', 'LineWidth',lineWidth, 'MarkerFaceColor','k'); hold(ax,'off')
 xlim(ax,[0, time(end)])
 ylim(ax,[0, ax.YLim(2)])
 ax.YTickLabel = ax.YTick;

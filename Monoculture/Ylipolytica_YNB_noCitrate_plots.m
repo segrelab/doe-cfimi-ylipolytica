@@ -5,7 +5,7 @@ clc
 
 %% Load Data
 
-saveDataName = 'Yarrowia_YNB';
+saveDataName = 'Ylipolytica_YNB_noCitrate';
 if isdir([pwd '\' saveDataName])==0; mkdir([pwd '\' saveDataName]); end
 
 % Simulations
@@ -28,12 +28,12 @@ titleSize = 30;
 lineWidth = 3;
 
 % Biomass Semilog Plot - Individual Sugars
-c = cbrewer('qual','Set1',numel(sugar_names));
+c = [[91,155,213]; [68,114,196]; [112,173,71]; [37,94,145]; [158,72,14]]./256;
 n = 1;
 if ishandle(n); clf(findobj('Type','Figure', 'Number',n)); end
 fig = figure(n); fig.Name = 'Biomass_Individual'; ax = axes(fig);
 set(ax, 'ColorOrder',c, 'NextPlot','replacechildren');
-semilogy(ax,time,biomass,'-', 'LineWidth',lineWidth);
+semilogy(ax,time,1E3.*biomass,'-', 'LineWidth',lineWidth);
 xlim(ax,[0, time(end)])
 ylim(ax,[0, ax.YLim(2)])
 ax.YTickLabel = ax.YTick;
@@ -51,7 +51,7 @@ n = 2;
 if ishandle(n); clf(findobj('Type','Figure', 'Number',n)); end
 fig = figure(n); fig.Name = 'Biomass_Individual'; ax = axes(fig);
 set(ax, 'ColorOrder',c, 'NextPlot','replacechildren');
-semilogy(ax,time,biomass_all,'k-', 'LineWidth',lineWidth);
+semilogy(ax,time,1E3.*biomass_all,'k-', 'LineWidth',lineWidth);
 xlim(ax,[0, time(end)])
 ylim(ax,[0, ax.YLim(2)])
 ax.YTickLabel = ax.YTick;
