@@ -114,16 +114,16 @@ exchRxns_idxInModel = cell(numel(model)); % pre-allocate
 exchMets_idxInModel = cell(numel(model)); % pre-allocate
 for numModel = 1:numel(model)
    % Find Exchange Reactions and Metabolites
-    [exchRxns_idxInModel{numModel},~] = identifyExchRxns(model{numModel});
-    [~,rm_idx,] = intersect(model{numModel}.rxns(exchRxns_idxInModel{numModel}),'EX_cpd11416_c0');
-    exchRxns_idxInModel{numModel}(rm_idx) = [];
-    [exchMets_idxInModel{numModel},~] = identifyExchMets(model{numModel});
-    [~,rm_idx,] = intersect(model{numModel}.mets(exchMets_idxInModel{numModel}),'cpd11416_c0');
-    exchMets_idxInModel{numModel}(rm_idx) = [];
-    
-    % Define All the Extracellular Metabolites
-    mets = setdiff(model{numModel}.mets(exchMets_idxInModel{numModel}),exchMets_names); % model mets NOT in extracellular mets
-    exchMets_names = [mets; exchMets_names]; % add to list
+   [exchRxns_idxInModel{numModel},~] = identifyExchRxns(model{numModel});
+   [~,rm_idx,] = intersect(model{numModel}.rxns(exchRxns_idxInModel{numModel}),'EX_cpd11416_c0');
+   exchRxns_idxInModel{numModel}(rm_idx) = [];
+   [exchMets_idxInModel{numModel},~] = identifyExchMets(model{numModel});
+   [~,rm_idx,] = intersect(model{numModel}.mets(exchMets_idxInModel{numModel}),'cpd11416_c0');
+   exchMets_idxInModel{numModel}(rm_idx) = [];
+   
+   % Define All the Extracellular Metabolites
+   mets = setdiff(model{numModel}.mets(exchMets_idxInModel{numModel}),exchMets_names); % model mets NOT in extracellular mets
+   exchMets_names = [mets; exchMets_names]; % add to list
 end
 
 % Add Cellulose and Cellulase
@@ -136,26 +136,25 @@ exchRxns_idxInMedia = cell(size(model));
 
 for numModel = 1:numel(model)
     % extracellular mets in model mets - index into extracellular mets
-    [~,exchMets_idxInMedia{numModel},~] = intersect(exchMets_names,model{numModel}.mets,'stable');
+    [~,~,exchMets_idxInMedia{numModel}] = intersect(model{numModel}.mets,exchMets_names,'stable');
     % model rxns of extracellular mets - index into model rxns
-    [exchRxns_idxInMedia{numModel},~] = identifyExchRxns(model{numModel},exchMets_names(exchMets_idxInMedia{numModel}));
+    [exchRxns_idxInMedia{numModel},~] = identifyExchRxnsFromMets(model{numModel},exchMets_names(exchMets_idxInMedia{numModel}));
 end
 
 %% Set Initial Metabolites
 
 exchMets_amt0 = zeros(size(exchMets_names));
-[~,media_names_idx,exchMets_names_idx] = intersect(media_names,exchMets_names,'stable');
-exchMets_amt0(exchMets_names_idx) = media_amt(media_names_idx);
+[~,media_idx,exchMets_idx] = intersect(media_names,exchMets_names,'stable');
+exchMets_amt0(exchMets_idx) = media_amt(media_idx);
 
 %% Cellulase Parameters
 
 % Parameters
-kcat_glc = 2.5E3; % turnover rate [1/hr]
-Km_glc = 1.2; % binding constant [mM]
-Km_enzyme = 1; % [mM]
-Y_glc = 10; % glucose yield coefficient [mmol glucose/mmol cellulose]
-beta = 10; % [mmol enzyme/(gCDW*hr)]
-alpha = 0; % enzyme production cost [gCDW/mmol enzyme]
+kcat_glc = 75; % turnover rate [1/hr]
+Km_glc = 0.2; % binding constant [mM]
+Km_enzyme = 1E-3; % [mM]
+Y_glc = 1E3; % glucose yield coefficient [mmol glucose/mmol cellulose]
+beta = 1E2; % [mmol enzyme/(gCDW*hr)]
 
 % Glucose
 [isGlc, index] = ismember('glc__D_e',exchMets_names);
@@ -229,23 +228,17 @@ for n = 1:N
             feasibilityFlag{numModel}{n+1} = FBA_solution.status;
         end
         
-        % Calculate Biomass and Enzyme Amount
+        % Calculate Biomass
+        % X(t+dt) = X(t) + mu*X(t)*dt
+        biomass{numModel}(n+1) = (1 + growth_rate*dt).*biomass{numModel}(n); % X(t+dt) = X(t) + mu*X(t)*dt
+        biomass{numModel}(biomass{numModel} > max_biomass) = max_biomass;
+        biomass{numModel}(biomass{numModel} < biomass_thresh) = 0;
+        
+        % Calculate Enzyme Amount
+        % E(t+dt) = E(t) + b*X(t)*(C(t)/(Km_E + C(t)))*dt
         if numModel == enzymeModel
-            % Biomass
-            % X(t+dt) = X(t) + mu*X(t)*dt - alpha*E(t)*dt
-            biomass{numModel}(n+1) = (1 + growth_rate*dt).*biomass{numModel}(n) ...
-                - alpha*exchMets_amt(n,enzyme_met_idx);
-            biomass{numModel}(biomass{numModel} > max_biomass) = max_biomass;
-            biomass{numModel}(biomass{numModel} < biomass_thresh) = 0;
-            
-            % Enzyme
-            % E(t+dt) = E(t) + b*X(t)*(C(t)/(Km_E + C(t)))*dt
             exchMets_amt(n+1,enzyme_met_idx) = exchMets_amt(n,enzyme_met_idx) + ...
                 beta*biomass{numModel}(n)*(exchMets_amt(n,cellulose_met_idx)/(Km_enzyme + exchMets_amt(n,cellulose_met_idx)))*dt;
-        else
-            biomass{numModel}(n+1) = (1 + growth_rate*dt).*biomass{numModel}(n); % X(t+dt) = X(t) + mu*X(t)*dt
-            biomass{numModel}(biomass{numModel} > max_biomass) = max_biomass;
-            biomass{numModel}(biomass{numModel} < biomass_thresh) = 0;
         end
         
         % Calculate External Metabolite Amounts
